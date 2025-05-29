@@ -11,7 +11,7 @@ This Bash script provides an interactive way to calculate various cryptographic 
 ## ✨ Features
 
 * **Interactive Input:** Easily provide the file path when prompted.
-* **Multiple Hash Algorithms:** Calculates MD5, SHA1, SHA256, and SHA512 hashes.
+* **Multiple Hash Algorithms:** Calculates MD5, SHA1, SHA256, SHA512, etc hashes.
 * **Cross-Platform Compatibility:** Works seamlessly on Linux and within Bash environments on Windows (like Git Bash or WSL).
 * **Error Handling:** Gracefully handles non-existent files or incorrect paths.
 * **User-Friendly Output:** Displays hashes clearly for quick verification.
