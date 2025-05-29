@@ -70,8 +70,28 @@ while true; do
         local file="$3"
 
         if command -v openssl &> /dev/null; then
-            # openssl dgst output includes filename, so we parse it
-            printf "%-10s %s\n" "$algo_name:" "$(openssl dgst "-$openssl_algo" "$file" | awk '{print $2}')"
+            local hash_output # Variable to store openssl output
+            # Execute openssl, redirecting stderr to stdout to capture errors
+            hash_output=$(openssl dgst "-$openssl_algo" "$file" 2>&1)
+            local exit_code=$?
+
+            if [[ $exit_code -eq 0 ]]; then
+                # If successful, parse the hash (it's typically the last field)
+                printf "%-10s %s\n" "$algo_name:" "$(echo "$hash_output" | awk '{print $NF}')"
+            else
+                # Check for common OpenSSL 3.x legacy provider error messages
+                if echo "$hash_output" | grep -q "digital envelope routines:evp_md_init_internal:initialization error:.*$openssl_algo" || \
+                   echo "$hash_output" | grep -q "digital envelope routines:inner evp generic fetchunsupported"; then
+                    printf "%-10s ERROR: Failed to calculate %s hash. This is likely due to OpenSSL 3.x not loading the 'legacy' provider.\n" "$algo_name:" "$algo_name"
+                    printf "           To fix this, you might need to:\n"
+                    printf "           1. Edit your openssl.cnf (often at %s) and add 'providers = legacy, default' in the [main] section.\n" "$(openssl version -d | awk -F'\"' '{print $2}')/openssl.cnf"
+                    printf "           2. On some Linux systems (e.g., Ubuntu/Debian), install the 'openssl-legacy-provider' package.\n"
+                    printf "           3. For temporary testing, you might try 'export OPENSSL_CONF=/path/to/your/openssl.cnf' pointing to a config that loads legacy.\n"
+                else
+                    # Generic openssl error
+                    printf "%-10s ERROR: Failed to calculate %s hash. OpenSSL reported:\n%s\n" "$algo_name:" "$algo_name" "$hash_output"
+                fi
+            fi
         else
             printf "%-10s 'openssl' command not found. Please install it for %s hash.\n" "$algo_name:" "$algo_name"
         fi
@@ -80,11 +100,11 @@ while true; do
     calculate_sum_hash "MD5" "md5sum" "$file_path"
     calculate_sum_hash "SHA1" "sha1sum" "$file_path"
     calculate_sum_hash "SHA256" "sha256sum" "$file_path"
-    calculate_sum_hash "SHA384" "sha384sum" "$file_path" # Added SHA384
+    calculate_sum_hash "SHA384" "sha384sum" "$file_path"
     calculate_sum_hash "SHA512" "sha512sum" "$file_path"
-    calculate_sum_hash "BLAKE2b" "b2sum" "$file_path"    # Added BLAKE2b
+    calculate_sum_hash "BLAKE2b" "b2sum" "$file_path"
 
-    calculate_openssl_hash "RIPEMD160" "ripemd160" "$file_path" # Added RIPEMD160
+    calculate_openssl_hash "RIPEMD160" "ripemd160" "$file_path"
 
     echo "---------------------------------------------------"
 done
